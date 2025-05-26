@@ -1,9 +1,17 @@
 // src/preload.ts
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getVersion: () => ipcRenderer.invoke('get-app-version'),
-  getToolsDirectory: () => ipcRenderer.invoke('get-tools-directory')
+  getToolsDirectory: () => ipcRenderer.invoke('get-tools-directory'),
+  // Auto-update related
+  checkForUpdates: () => ipcRenderer.send('check-for-updates-manual'),
+  onUpdateStatus: (callback: (event: IpcRendererEvent, status: any) => void) => {
+    ipcRenderer.on('update-status', callback);
+    // Return a cleanup function
+    return () => ipcRenderer.removeListener('update-status', callback);
+  },
+  quitAndInstallUpdate: () => ipcRenderer.send('quit-and-install-update')
 });
 
 window.addEventListener('DOMContentLoaded', () => {

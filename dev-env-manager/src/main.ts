@@ -1,10 +1,16 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { autoUpdater, UpdateInfo, ProgressInfo } from 'electron-updater'; // Import autoUpdater and relevant types
 import * as path from 'path';
 import { getToolsDirectoryPath } from './core/toolsManager';
 
+// Keep a reference to mainWindow
+let mainWindow: BrowserWindow | null = null;
+
+// Configure logging for autoUpdater - Optional, but helpful for debugging
+autoUpdater.logger = console; // Directs autoUpdater logs to the main process console
+
 function createWindow() {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
@@ -15,47 +21,73 @@ function createWindow() {
   });
 
   // Load the index.html of the app.
-  // In development, you might load a URL from a dev server (e.g., Vite or Webpack)
-  // For production, you'll load the built index.html file.
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:3000'); // Load from Vite dev server
   } else {
     // Production: load the built index.html from dist/renderer
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(path.join(__dirname, 'renderer/index.html'));
   }
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools(); // Open DevTools if needed
+  mainWindow.on('closed', () => mainWindow = null); // Dereference on close
 }
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
-  // Handle IPC call for app version
-  ipcMain.handle('get-app-version', () => {
-    return app.getVersion();
-  });
+function sendStatusToWindow(channel: string, message: any) {
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, message);
+  }
+}
 
-  ipcMain.handle('get-tools-directory', () => {
-    return getToolsDirectoryPath();
+app.whenReady().then(() => {
+  ipcMain.handle('get-app-version', () => app.getVersion());
+  ipcMain.handle('get-tools-directory', getToolsDirectoryPath);
+
+  ipcMain.on('check-for-updates-manual', () => {
+    console.log('Manual update check triggered.');
+    autoUpdater.checkForUpdatesAndNotify();
+  });
+  
+  ipcMain.on('quit-and-install-update', () => {
+    autoUpdater.quitAndInstall();
   });
 
   createWindow();
 
   app.on('activate', function () {
-    // On macOS it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Check for updates on startup (after window is created)
+  autoUpdater.checkForUpdatesAndNotify();
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.
+// Auto-updater event listeners
+autoUpdater.on('checking-for-update', () => {
+  sendStatusToWindow('update-status', { msg: 'Checking for update...' });
+});
+autoUpdater.on('update-available', (info: UpdateInfo) => {
+  sendStatusToWindow('update-status', { msg: `Update available: ${info.version}`, available: true, info });
+});
+autoUpdater.on('update-not-available', () => {
+  sendStatusToWindow('update-status', { msg: 'Update not available.', notAvailable: true });
+});
+autoUpdater.on('error', (err) => {
+  sendStatusToWindow('update-status', { msg: `Error in auto-updater: ${err.message}`, error: true, err });
+});
+autoUpdater.on('download-progress', (progressObj: ProgressInfo) => {
+  sendStatusToWindow('update-status', { 
+    msg: `Downloading update: ${Math.round(progressObj.percent)}%`, 
+    progress: progressObj 
+  });
+});
+autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+  sendStatusToWindow('update-status', { 
+    msg: `Update downloaded: ${info.version}. Restart to install.`, 
+    downloaded: true, 
+    info 
+  });
+});
