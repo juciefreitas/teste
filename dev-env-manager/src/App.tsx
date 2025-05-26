@@ -1,97 +1,109 @@
-import React, { useEffect, useState } from 'react';
-import { RepositoryPage } from './features/RepositoryManagement';
-import { TechnologyPage } from './features/TechnologyManagement';
-import { UpdateStatusInfo } from './electron.d'; // Import the type
+// src/App.tsx
+import React, { useEffect, useState, useCallback } from 'react';
+import MainLayout from './components/Layout/MainLayout';
+import ProjectDashboardPage from './features/ProjectDashboard/ProjectDashboardPage';
+import ConsoleOutput from './features/ConsoleView/ConsoleOutput';
+import { UpdateStatusInfo, ProcessOutputData, ProcessTerminationData } from './electron.d';
+
+// Define a unified console message type for App state
+interface AppConsoleMessage {
+  id: string;
+  timestamp: Date;
+  text: string;
+  type: 'stdout' | 'stderr' | 'system' | 'git'; // Added 'git' type
+  projectId?: string; // Optional: to associate with a project
+  processId?: string; // Optional: to associate with a specific process
+}
 
 function App() {
   const [version, setVersion] = useState('Loading...');
   const [toolsPath, setToolsPath] = useState('Loading tools path...');
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatusInfo | null>(null); // State for update status
-  const [showInstallButton, setShowInstallButton] = useState(false);
+  const [consoleMessages, setConsoleMessages] = useState<AppConsoleMessage[]>([]);
+
+  // Consistent way to add messages to the console
+  const addConsoleMessage = useCallback((
+    text: string, 
+    type: AppConsoleMessage['type'] = 'system', 
+    projectId?: string, 
+    processId?: string
+  ) => {
+    setConsoleMessages(prev => [
+      ...prev, 
+      { id: Date.now().toString() + Math.random().toString(36).substr(2, 9), timestamp: new Date(), text, type, projectId, processId }
+    ]);
+  }, []);
+  
+  const clearConsoleMessages = useCallback(() => {
+    setConsoleMessages([
+        // Optionally, keep initial system messages or add a "Console Cleared" message
+        {id: Date.now().toString(), timestamp: new Date(), text: "Console cleared by user.", type: 'system'}
+    ]);
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (window.electronAPI) {
-        try {
-          const appVersion = await window.electronAPI.getVersion();
-          setVersion(appVersion);
+    addConsoleMessage(`Dev Env Manager Initializing...`, 'system');
 
-          const currentToolsPath = await window.electronAPI.getToolsDirectory(); // Fetch tools path
-          setToolsPath(currentToolsPath);
+    const fetchData = async () => { 
+        if (window.electronAPI) {
+            try {
+                const appVersion = await window.electronAPI.getVersion();
+                setVersion(appVersion);
+                addConsoleMessage(`App Version: ${appVersion}`, 'system');
 
-        } catch (error) {
-          console.error('Failed to fetch data:', error);
-          setVersion('Error fetching version');
-          setToolsPath('Error fetching tools path');
+                const currentToolsPath = await window.electronAPI.getToolsDirectory();
+                setToolsPath(currentToolsPath);
+                addConsoleMessage(`Tools Directory: ${currentToolsPath}`, 'system');
+            } catch (error: any) {
+                addConsoleMessage(`Error fetching initial app data: ${error.message}`, 'stderr');
+            }
         }
-      } else {
-        console.warn('electronAPI not found. Are you running in Electron?');
-        setVersion('N/A (not in Electron?)');
-        setToolsPath('N/A (not in Electron?)');
-      }
     };
     fetchData();
 
-    // Setup listener for update status
-    const removeUpdateListener = window.electronAPI.onUpdateStatus((_event, status) => {
-      console.log("Update status from main:", status);
-      setUpdateStatus(status);
+    // Listener for Auto Update Status
+    const removeUpdateListener = window.electronAPI.onUpdateStatus((_event, status: UpdateStatusInfo) => {
+      addConsoleMessage(`Update Status: ${status.msg}`, status.error ? 'stderr' : 'system');
       if (status.downloaded) {
-        setShowInstallButton(true);
-      } else {
-        setShowInstallButton(false); // Hide if new status is not 'downloaded'
+        addConsoleMessage('Update downloaded. Click "Quit and Install Update" in the header.', 'system');
       }
     });
 
+    // Listener for Process Output
+    const removeProcessOutputListener = window.electronAPI.onProcessOutput((_event, output: ProcessOutputData) => {
+      addConsoleMessage(output.data, output.type, output.projectId, output.processId);
+    });
+
+    // Listener for Process Termination
+    const removeProcessTerminationListener = window.electronAPI.onProcessTermination((_event, term: ProcessTerminationData) => {
+      let message = `Process ${term.processId || ''} for project ${term.projectId} exited`;
+      if(term.code !== null) message += ` with code: ${term.code}`;
+      // Error might not be an Error object if it's just a message from main process
+      const errorMessage = typeof term.error === 'string' ? term.error : (term.error?.message || '');
+      if(errorMessage) message += ` (Error: ${errorMessage})`;
+      addConsoleMessage(message, term.code === 0 ? 'system' : 'stderr', term.projectId, term.processId);
+    });
+    
     return () => {
-      // Cleanup listener when component unmounts
-      if (removeUpdateListener) {
-        removeUpdateListener();
-      }
+      if (removeUpdateListener) removeUpdateListener();
+      if (removeProcessOutputListener) removeProcessOutputListener();
+      if (removeProcessTerminationListener) removeProcessTerminationListener();
     };
-  }, []);
-
-  const handleCheckForUpdates = () => {
-    setUpdateStatus({ msg: "Manual check triggered..." }); // Optimistic update
-    setShowInstallButton(false);
-    window.electronAPI.checkForUpdates();
-  };
-
-  const handleQuitAndInstall = () => {
-    window.electronAPI.quitAndInstallUpdate();
-  };
+  }, [addConsoleMessage]); // addConsoleMessage is now a dependency
 
   return (
-    <div>
-      <div style={{ padding: '10px', backgroundColor: '#f0f0f0', borderBottom: '1px solid #ccc' }}>
-        <h1>Dev Env Manager</h1>
-        <p>App Version: <strong id="app-version">{version}</strong></p>
-        <p>Tools Directory: <small><code>{toolsPath}</code></small></p>
-        {/* Auto Update Section */}
-        <div>
-          <button onClick={handleCheckForUpdates}>Check for Updates</button>
-          {showInstallButton && (
-            <button onClick={handleQuitAndInstall} style={{ marginLeft: '10px', color: 'green' }}>
-              Quit and Install Update
-            </button>
-          )}
-          {updateStatus && <p style={{fontSize: '0.9em', color: updateStatus.error ? 'red' : 'inherit'}}>Update Status: {updateStatus.msg}</p>}
-        </div>
-        <p>
-          <small>
-            Chrome: <span id="chrome-version"></span> |
-            Node: <span id="node-version"></span> |
-            Electron: <span id="electron-version"></span>
-          </small>
-        </p>
-      </div>
-      <div style={{ padding: '20px' }}>
-        <RepositoryPage />
-        <hr style={{ margin: '20px 0' }} />
-        <TechnologyPage />
-      </div>
-    </div>
+    <MainLayout 
+      consoleSlot={(isExpanded, toggleExpand) => ( // consoleSlot is now a function
+        <ConsoleOutput 
+          messages={consoleMessages} 
+          height="100%" 
+          isExpanded={isExpanded}
+          onToggleExpand={toggleExpand}
+          onClearConsole={clearConsoleMessages} // Pass clear function
+        />
+      )}
+    >
+      <ProjectDashboardPage addConsoleMessage={addConsoleMessage} />
+    </MainLayout>
   );
 }
-
 export default App;
