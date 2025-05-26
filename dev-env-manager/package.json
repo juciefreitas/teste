@@ -1,0 +1,35 @@
+{
+  "name": "dev-env-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build:main": "tsc --project tsconfig.json",
+    "dev:renderer": "vite",
+    "build:renderer": "vite build",
+    "start": "cross-env NODE_ENV=production npm run build:main && npm run build:renderer && electron .",
+    "start:main-dev": "npm run build:main && electron .",
+    "dev": "cross-env NODE_ENV=development concurrently -k \"npm:dev:renderer\" \"npm run start:main-dev\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^36.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@vitejs/plugin-react": "^4.5.0",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron-builder": "^26.0.12",
+    "electron-updater": "^6.6.2",
+    "vite": "^6.3.5"
+  }
+}
