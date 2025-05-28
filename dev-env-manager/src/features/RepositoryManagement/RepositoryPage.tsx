@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Repository } from '../../types';
-import { mockRepositories } from '../../config/mockData';
 import RepositoryList from '../../components/RepositoryList';
 
 const RepositoryPage: React.FC = () => {
-  const [repositories, setRepositories] = useState<Repository[]>(mockRepositories);
+  const [repositories, setRepositories] = useState<Repository[]>([]);
   // Placeholder for form state
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoUrl, setNewRepoUrl] = useState('');

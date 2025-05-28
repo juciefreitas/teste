@@ -1,7 +1,7 @@
 // src/features/ProjectDashboard/components/ProjectListItem.tsx
 import React, { useEffect, useState, useCallback } from 'react'; 
 import { Project, ProjectStatus } from '../../../types';
-import { Card, Text, Group, Button, Menu, Badge, Space, Divider, Stack, Progress, Tooltip } from '@mantine/core'; 
+import { Card, Text, Group, Button, Menu, Badge, Space, Divider, Stack, Progress, Tooltip, Box } from '@mantine/core'; 
 import { IconChevronDown, IconGitBranch, IconPlayerPlay, IconTools, IconSettings, IconFiles, IconLink, IconTerminal2, IconPlayerStop } from '@tabler/icons-react'; 
 
 interface ProjectListItemProps {
@@ -168,9 +168,9 @@ const ProjectListItem: React.FC<ProjectListItemProps> = ({ project, onProjectUpd
 
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder mb="md">
-      <Group position="apart" mb="xs">
-        <Stack spacing="xs">
-          <Text weight={500} size="lg">{project.name}</Text>
+      <Group justify="apart" mb="xs">
+        <Stack gap="xs">
+          <Text fw={500} size="lg">{project.name}</Text>
           <Text size="sm" color="dimmed">
             Tech: {project.technology || 'N/A'} ({project.techVersion || 'N/A'}) - Port: {project.port || 'N/A'}
           </Text>
@@ -184,31 +184,31 @@ const ProjectListItem: React.FC<ProjectListItemProps> = ({ project, onProjectUpd
         <Box my="sm">
           <Text size="xs" color={gitUiFeedback.error ? 'red' : (project.currentStatus === 'error' ? 'red' : 'blue')}>{gitUiFeedback.message.startsWith('[GIT') ? gitUiFeedback.message : project.statusMessage}</Text>
           {typeof gitUiFeedback.progressVal === 'number' && gitUiFeedback.progressVal < 100 && !gitUiFeedback.error && (
-            <Progress value={gitUiFeedback.progressVal} size="sm" animate={isCloningOrPulling && gitUiFeedback.progressVal > 0 && gitUiFeedback.progressVal < 100} />
+            <Progress value={gitUiFeedback.progressVal} size="sm" animated={isCloningOrPulling && gitUiFeedback.progressVal > 0 && gitUiFeedback.progressVal < 100} />
           )}
         </Box>
       ) : null}
       
       <Divider my="sm" />
 
-      <Group spacing="xs" grow>
-        <Button leftIcon={<IconGitBranch size={14} />} variant="outline" size="xs" onClick={handleGitAction} loading={isCloningOrPulling} disabled={isCloningOrPulling || project.currentStatus === 'building' || project.currentStatus === 'running'}>
+      <Group gap="xs" grow>
+        <Button leftSection={<IconGitBranch size={14} />} variant="outline" size="xs" onClick={handleGitAction} loading={isCloningOrPulling} disabled={isCloningOrPulling || project.currentStatus === 'building' || project.currentStatus === 'running'}>
           {project.currentStatus === 'not_cloned' ? 'Clone' : 'Pull'}
         </Button>
 
         <Tooltip label={project.buildCmd || "No build command"} disabled={!!project.buildCmd}>
-          <Button leftIcon={<IconTools size={14} />} variant="outline" size="xs" onClick={() => handleExecuteCommand('build')} disabled={!project.buildCmd || project.currentStatus === 'building' || project.currentStatus === 'running' || project.currentStatus === 'not_cloned'}>
+          <Button leftSection={<IconTools size={14} />} variant="outline" size="xs" onClick={() => handleExecuteCommand('build')} disabled={!project.buildCmd || project.currentStatus === 'building' || project.currentStatus === 'running' || project.currentStatus === 'not_cloned'}>
             Build
           </Button>
         </Tooltip>
 
         {project.currentStatus === 'running' ? (
-          <Button leftIcon={<IconPlayerStop size={14} />} variant="filled" color="red" size="xs" onClick={handleStopCommand} disabled={!activeProcessId}>
+          <Button leftSection={<IconPlayerStop size={14} />} variant="filled" color="red" size="xs" onClick={handleStopCommand} disabled={!activeProcessId}>
             Stop
           </Button>
         ) : (
           <Tooltip label={project.startCmd || "No start command"} disabled={!!project.startCmd}>
-            <Button leftIcon={<IconPlayerPlay size={14} />} variant="outline" size="xs" onClick={() => handleExecuteCommand('start')} disabled={!project.startCmd || project.currentStatus === 'building' || project.currentStatus === 'running' || project.currentStatus === 'not_cloned'}>
+            <Button leftSection={<IconPlayerPlay size={14} />} variant="outline" size="xs" onClick={() => handleExecuteCommand('start')} disabled={!project.startCmd || project.currentStatus === 'building' || project.currentStatus === 'running' || project.currentStatus === 'not_cloned'}>
               Start
             </Button>
           </Tooltip>
@@ -216,32 +216,32 @@ const ProjectListItem: React.FC<ProjectListItemProps> = ({ project, onProjectUpd
         
         <Menu shadow="md" width={200}>
           <Menu.Target>
-            <Button leftIcon={<IconSettings size={14} />} variant="outline" size="xs">Config</Button>
+            <Button leftSection={<IconSettings size={14} />} variant="outline" size="xs">Config</Button>
           </Menu.Target>
           <Menu.Dropdown>
             <Menu.Item disabled>View/Edit (NI)</Menu.Item>
-            {project.configNotes && <Menu.Item disabled><Text truncate>Notes: {project.configNotes}</Text></Menu.Item>}
+            {project.configNotes && <Menu.Item disabled><Text truncate>{`Notes: ${project.configNotes}`}</Text></Menu.Item>}
           </Menu.Dropdown>
         </Menu>
       </Group>
       <Space h="xs"/>
-      <Group spacing="xs" grow>
+      <Group gap="xs" grow>
          <Menu shadow="md" width={200}>
-          <Menu.Target><Button variant="subtle" size="xs" rightIcon={<IconChevronDown size={14} />}>Environments</Button></Menu.Target>
+          <Menu.Target><Button variant="subtle" size="xs" rightSection={<IconChevronDown size={14} />}>Environments</Button></Menu.Target>
           <Menu.Dropdown>
-            {project.environments?.map(env => <Menu.Item key={env.id} disabled>{env.name} {env.isActive ? '(Active)' : ''}</Menu.Item>) ?? <Menu.Item disabled>None</Menu.Item>}
+            {project.environments?.map(env => <Menu.Item key={env.id} disabled>{`${env.name} ${env.isActive ? '(Active)' : ''}`}</Menu.Item>) ?? <Menu.Item disabled>None</Menu.Item>}
           </Menu.Dropdown>
         </Menu>
         <Menu shadow="md" width={200}>
-          <Menu.Target><Button variant="subtle" size="xs" rightIcon={<IconChevronDown size={14} />}>Links</Button></Menu.Target>
+          <Menu.Target><Button variant="subtle" size="xs" rightSection={<IconChevronDown size={14} />}>Links</Button></Menu.Target>
           <Menu.Dropdown>
             {project.links?.map(link => <Menu.Item key={link.id} component="a" href={link.url} target="_blank">{link.title}</Menu.Item>) ?? <Menu.Item disabled>None</Menu.Item>}
           </Menu.Dropdown>
         </Menu>
         <Menu shadow="md" width={200}>
-          <Menu.Target><Button variant="subtle" size="xs" rightIcon={<IconChevronDown size={14} />}>Logs</Button></Menu.Target>
+          <Menu.Target><Button variant="subtle" size="xs" rightSection={<IconChevronDown size={14} />}>Logs</Button></Menu.Target>
           <Menu.Dropdown>
-             {project.logConfigs?.map(log => <Menu.Item key={log.id} disabled>{log.title} (NI)</Menu.Item>) ?? <Menu.Item disabled>None</Menu.Item>}
+             {project.logConfigs?.map(log => <Menu.Item key={log.id} disabled>{`${log.title} (NI)`}</Menu.Item>) ?? <Menu.Item disabled>None</Menu.Item>}
           </Menu.Dropdown>
         </Menu>
       </Group>

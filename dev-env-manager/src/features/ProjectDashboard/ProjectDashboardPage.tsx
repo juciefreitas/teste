@@ -30,9 +30,9 @@ const ProjectDashboardPage: React.FC<ProjectDashboardPageProps> = ({ addConsoleM
 
   return (
     <Container fluid>
-      <Group position="apart" mb="xl">
+      <Group justify="space-between" mb="xl">
         <Title order={2}>Project Dashboard</Title>
-        <Button leftIcon={<IconPlus size={14} />} onClick={() => alert('Add New Project (NI)')}>
+        <Button leftSection={<IconPlus size={14} />} onClick={() => alert('Add New Project (NI)')}>
           Add Project
         </Button>
       </Group>

@@ -1,0 +1,7 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const jsx_runtime_1 = require("react/jsx-runtime");
+const TechnologyListItem = ({ technology }) => {
+    return ((0, jsx_runtime_1.jsxs)("div", { style: { border: '1px solid #ccc', padding: '10px', marginBottom: '10px', borderRadius: '4px' }, children: [(0, jsx_runtime_1.jsxs)("h3", { children: [technology.name, " ", technology.version && `(${technology.version})`] }), (0, jsx_runtime_1.jsxs)("p", { children: ["Status: ", technology.isInstalled ? `Installed (${technology.localPath || 'Path not set'})` : 'Not Installed'] }), technology.downloadUrl && !technology.isInstalled && ((0, jsx_runtime_1.jsx)("button", { onClick: () => alert('Download ' + technology.name + ' from ' + technology.downloadUrl + ' (Not implemented)'), children: "Download" })), !technology.isInstalled && ((0, jsx_runtime_1.jsx)("button", { onClick: () => alert('Set local path for ' + technology.name + ' (Not implemented)'), style: { marginLeft: '5px' }, children: "Set Local Path" })), technology.isInstalled && technology.localPath && ((0, jsx_runtime_1.jsx)("button", { onClick: () => alert('Clear local path for ' + technology.name + ' (Not implemented)'), style: { marginLeft: '5px' }, children: "Clear Path / Uninstall" })), (0, jsx_runtime_1.jsx)("button", { onClick: () => alert('Edit ' + technology.name + ' (Not implemented)'), style: { marginLeft: '5px' }, children: "Edit" })] }));
+};
+exports.default = TechnologyListItem;
